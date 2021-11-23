@@ -24,11 +24,26 @@ import org.apache.ibatis.binding.MapperProxy.MapperMethodInvoker;
 import org.apache.ibatis.session.SqlSession;
 
 /**
+ *
+ * MapperProxy 的工厂类，负责生成实际的Mapper代理类，
+ * 并且缓存实际的Mapper方法和MapperMethodInvoker的对应关系
+ *
+ * MapperMethodInvoker就是对Mapper中方法的一个封装
+ *
  * @author Lasse Voss
  */
 public class MapperProxyFactory<T> {
 
+  /**
+   * 这个是在addMapper时，添加进来的Mapper接口的Class类型
+   */
   private final Class<T> mapperInterface;
+
+  /**
+   * 此Mapper接口中的Mapper方法及其对应的MapperMethodInvoker，这个是做了一个反射的调用封装
+   *
+   * 主要实现类有 PlainMethodInvoker 和 DefaultMethodInvoker，也就是普通的接口方法，和默认方法
+   */
   private final Map<Method, MapperMethodInvoker> methodCache = new ConcurrentHashMap<>();
 
   public MapperProxyFactory(Class<T> mapperInterface) {
@@ -49,6 +64,7 @@ public class MapperProxyFactory<T> {
   }
 
   public T newInstance(SqlSession sqlSession) {
+    // MapperProxy是一个InvocationHandler的实现类，也就是我们的代理逻辑
     final MapperProxy<T> mapperProxy = new MapperProxy<>(sqlSession, mapperInterface, methodCache);
     return newInstance(mapperProxy);
   }

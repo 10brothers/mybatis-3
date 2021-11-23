@@ -46,19 +46,28 @@ import org.apache.ibatis.util.MapUtil;
  * This class represents a cached set of class definition information that
  * allows for easy mapping between property names and getter/setter methods.
  *
+ * 这个类代表一个类定义信息的已缓存集合，允许更方面在属性名和其getter/setter方法间映射
  * @author Clinton Begin
  */
 public class Reflector {
 
+  // 实际操作的类的Class
   private final Class<?> type;
   private final String[] readablePropertyNames;
   private final String[] writablePropertyNames;
+  // set方法对应的属性名(通过开头为set来截取) 和其对应的Method封装后的Invoker的对应关系
   private final Map<String, Invoker> setMethods = new HashMap<>();
   private final Map<String, Invoker> getMethods = new HashMap<>();
+
+  // set方法参数类型
   private final Map<String, Class<?>> setTypes = new HashMap<>();
+  // get方法的方返回值类型
   private final Map<String, Class<?>> getTypes = new HashMap<>();
+
+  // 此类的默认构造器
   private Constructor<?> defaultConstructor;
 
+  // 大小写敏感的，实际上是把属性名全部转大些和通过截取setter方法名获得的属性名做一个映射
   private Map<String, String> caseInsensitivePropertyMap = new HashMap<>();
 
   public Reflector(Class<?> clazz) {

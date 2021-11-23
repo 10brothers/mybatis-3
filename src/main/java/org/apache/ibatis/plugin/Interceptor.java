@@ -18,6 +18,10 @@ package org.apache.ibatis.plugin;
 import java.util.Properties;
 
 /**
+ *
+ * 用来对Executor StatementHandler ParameterHandler ResultSetHandler 中的一些方法做拦截处理
+ *
+ * 使用JDK动态代理的方式，
  * @author Clinton Begin
  */
 public interface Interceptor {

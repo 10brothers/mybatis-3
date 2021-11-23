@@ -1,0 +1,12 @@
+# Session相关
+这个包下面都是Session相关的类，Session是Mybatis的核心
+
+Mybatis的开始就是从一个Session开始，任何一次查询一定位于一个Session中
+
+Session包含了所有的信息
+
+连接、事务、被代理的Mapper对象的等等所有的一切
+
+一开始就要创建一个SqlSessionFactory
+
+也是Mybatis的启动入口

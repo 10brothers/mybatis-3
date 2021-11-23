@@ -34,12 +34,22 @@ import org.apache.ibatis.session.SqlSession;
 public class MapperRegistry {
 
   private final Configuration config;
+
+  /**
+   * Mapper的Class 和 MapperProxyFactory的映射关系，MapperProxyFactory是MapperProxy的工厂类，
+   * 而MapperProxy就是我们的Mapper接口实际的代理类的处理逻辑，也就是一个InvocationHandler实现类
+   *
+   * 这里缓存所有的mapper
+   */
   private final Map<Class<?>, MapperProxyFactory<?>> knownMappers = new HashMap<>();
 
   public MapperRegistry(Configuration config) {
     this.config = config;
   }
 
+  /**
+   * 这个方法会返回对应Mapper类的代理对象
+   */
   @SuppressWarnings("unchecked")
   public <T> T getMapper(Class<T> type, SqlSession sqlSession) {
     final MapperProxyFactory<T> mapperProxyFactory = (MapperProxyFactory<T>) knownMappers.get(type);
@@ -47,6 +57,8 @@ public class MapperRegistry {
       throw new BindingException("Type " + type + " is not known to the MapperRegistry.");
     }
     try {
+      // 生成一个代理对象，也就是说每次使用SqlSession去调用getMapper时，都会产生一个新的代理对象
+      // 因为每次sql session可能都不一样了
       return mapperProxyFactory.newInstance(sqlSession);
     } catch (Exception e) {
       throw new BindingException("Error getting mapper instance. Cause: " + e, e);
@@ -57,8 +69,13 @@ public class MapperRegistry {
     return knownMappers.containsKey(type);
   }
 
+  /**
+   * 为Mapper接口 生成一个代理对象
+   */
   public <T> void addMapper(Class<T> type) {
+    // 必须是一个接口
     if (type.isInterface()) {
+      // 是否已经存在了
       if (hasMapper(type)) {
         throw new BindingException("Type " + type + " is already known to the MapperRegistry.");
       }

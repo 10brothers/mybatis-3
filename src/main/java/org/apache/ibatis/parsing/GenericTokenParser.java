@@ -16,6 +16,8 @@
 package org.apache.ibatis.parsing;
 
 /**
+ * 通用展位符解析器。使用时指定左右token对，然后再指定一个token处理器
+ * 主要是为了${} #{}这两种展位符
  * @author Clinton Begin
  */
 public class GenericTokenParser {
@@ -30,6 +32,13 @@ public class GenericTokenParser {
     this.handler = handler;
   }
 
+  /**
+   *  使用给定的token和tokenHandler来对sql内容解析。如果目前文本没有能匹配到的token，则直接返回原文本，否则使用
+   *  TokenHandler来处理匹配到的展位符。
+   * @param text  书写的原始的sql文本的一部分，通常是由 TextSqlNode IfSqlNode等持有表示
+   * @return 返回由 handler解析后的数据，TokenHandler的handleToken方法可以对原始文本进行修改
+   *          比如展位符 #{} -&gt; ?就是通过这种方式
+   */
   public String parse(String text) {
     if (text == null || text.isEmpty()) {
       return "";

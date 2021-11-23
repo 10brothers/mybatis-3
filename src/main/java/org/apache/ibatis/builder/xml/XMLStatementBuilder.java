@@ -39,6 +39,10 @@ import org.apache.ibatis.session.Configuration;
 public class XMLStatementBuilder extends BaseBuilder {
 
   private final MapperBuilderAssistant builderAssistant;
+
+  /**
+   * 这个context指的是 select insert update delete这几个标签对应的XNode
+   */
   private final XNode context;
   private final String requiredDatabaseId;
 
@@ -53,7 +57,12 @@ public class XMLStatementBuilder extends BaseBuilder {
     this.requiredDatabaseId = databaseId;
   }
 
+  /**
+   * 解析select update insert delete xml标签
+   */
   public void parseStatementNode() {
+
+    // id，一般是方法名，如果不是的话，没法通过接口方法名查找到对应的MappedStatement
     String id = context.getStringAttribute("id");
     String databaseId = context.getStringAttribute("databaseId");
 
@@ -69,9 +78,12 @@ public class XMLStatementBuilder extends BaseBuilder {
     boolean resultOrdered = context.getBooleanAttribute("resultOrdered", false);
 
     // Include Fragments before parsing
+    // mapper.xml中的 <sql>标签，在使用时是通过 include标签的方式
+    // 这里就是查找是否存在 include
     XMLIncludeTransformer includeParser = new XMLIncludeTransformer(configuration, builderAssistant);
     includeParser.applyIncludes(context.getNode());
 
+    // 解析参数类型，这里使用的别名的方式, parameterType 是别名
     String parameterType = context.getStringAttribute("parameterType");
     Class<?> parameterTypeClass = resolveClass(parameterType);
 
@@ -79,10 +91,13 @@ public class XMLStatementBuilder extends BaseBuilder {
     LanguageDriver langDriver = getLanguageDriver(lang);
 
     // Parse selectKey after includes and remove them.
+    // 处理selectKey
     processSelectKeyNodes(id, parameterTypeClass, langDriver);
 
     // Parse the SQL (pre: <selectKey> and <include> were parsed and removed)
     KeyGenerator keyGenerator;
+
+    // 继续处理selectKey的情况
     String keyStatementId = id + SelectKeyGenerator.SELECT_KEY_SUFFIX;
     keyStatementId = builderAssistant.applyCurrentNamespace(keyStatementId, true);
     if (configuration.hasKeyGenerator(keyStatementId)) {
@@ -93,14 +108,20 @@ public class XMLStatementBuilder extends BaseBuilder {
           ? Jdbc3KeyGenerator.INSTANCE : NoKeyGenerator.INSTANCE;
     }
 
+    // 生成SqlSource，sqlSource从LangDriver来生成，这里是XMLLanguageDriver，
+    // 表示从XML配置的标签中生成SqlSource
     SqlSource sqlSource = langDriver.createSqlSource(configuration, context, parameterTypeClass);
+    // 是否指定了statementType，没指定就默认PREPARE
     StatementType statementType = StatementType.valueOf(context.getStringAttribute("statementType", StatementType.PREPARED.toString()));
     Integer fetchSize = context.getIntAttribute("fetchSize");
     Integer timeout = context.getIntAttribute("timeout");
     String parameterMap = context.getStringAttribute("parameterMap");
     String resultType = context.getStringAttribute("resultType");
+    // resultType仍然是别名的方式
+    // org.apache.ibatis.type.TypeAliasRegistry.TypeAliasRegistry 这个构造器里默认注册了很多内置的
     Class<?> resultTypeClass = resolveClass(resultType);
     String resultMap = context.getStringAttribute("resultMap");
+    // 结果集的类型，没指定就默认
     String resultSetType = context.getStringAttribute("resultSetType");
     ResultSetType resultSetTypeEnum = resolveResultSetType(resultSetType);
     if (resultSetTypeEnum == null) {
@@ -108,6 +129,8 @@ public class XMLStatementBuilder extends BaseBuilder {
     }
     String keyProperty = context.getStringAttribute("keyProperty");
     String keyColumn = context.getStringAttribute("keyColumn");
+
+    // 多结果集的返回
     String resultSets = context.getStringAttribute("resultSets");
 
     builderAssistant.addMappedStatement(id, sqlSource, statementType, sqlCommandType,
@@ -154,6 +177,9 @@ public class XMLStatementBuilder extends BaseBuilder {
     String resultMap = null;
     ResultSetType resultSetTypeEnum = null;
 
+    // 这里构建的SqlSource有两个类型，RawSqlSource以及DynamicSqlSource
+    // 如果当前MappedStatement的statementType为 STATEMENT，但是使用#{}占位符
+    // 会导致直接查询的SQL，#{} -> ? ,查询出错
     SqlSource sqlSource = langDriver.createSqlSource(configuration, nodeToHandle, parameterTypeClass);
     SqlCommandType sqlCommandType = SqlCommandType.SELECT;
 

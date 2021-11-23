@@ -21,6 +21,15 @@ import java.util.List;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ * 用于描述参数的一些信息，通常用于参数字段需要做特殊说明的
+ *
+ * 服务于基于xml配置时的 &lt;parameterMap&gt;&lt;/parameterMap&gt; 属性 parameterMap，<br/>
+ * 以及属性 parameterType
+ *
+ * <p>
+ *   上面两个，如果同时使用 parameterMap会生效
+ * </p>
+ *
  * @author Clinton Begin
  */
 public class ParameterMap {

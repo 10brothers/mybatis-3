@@ -71,6 +71,9 @@ public class PropertyParser {
       return (variables == null) ? defaultValue : variables.getProperty(key, defaultValue);
     }
 
+    /**
+     * 如果能直接找到，则从variable中返回，如果不能直接返回原串
+     */
     @Override
     public String handleToken(String content) {
       if (variables != null) {

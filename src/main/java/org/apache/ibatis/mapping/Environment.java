@@ -20,6 +20,9 @@ import javax.sql.DataSource;
 import org.apache.ibatis.transaction.TransactionFactory;
 
 /**
+ *
+ * 所谓的环境，其实是持有数据源和事物工厂对象
+ *
  * @author Clinton Begin
  */
 public final class Environment {

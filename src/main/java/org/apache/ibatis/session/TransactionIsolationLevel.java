@@ -18,6 +18,9 @@ package org.apache.ibatis.session;
 import java.sql.Connection;
 
 /**
+ *
+ * 开启事务时，指定使用的事务的隔离级别
+ *
  * @author Clinton Begin
  */
 public enum TransactionIsolationLevel {

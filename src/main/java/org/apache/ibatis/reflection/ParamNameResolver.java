@@ -31,6 +31,38 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
+/**
+ * 用来确定参数的下标和参数名的映射关系
+ * 因为后面的${} 或者 #{}产生的占位符，都需要根据这个参数名和值进行匹配
+ *
+ * <p>
+ *
+ * 如果使用了@Param注解，那么就是下标和注解的value值的对应关系
+ * </p>
+ * <p>
+ *
+ * 如果没有使用@Param注解，并且开启了使用真实参数名
+ * <li>
+ *      如果是Java8+，并且编译时保留了原始参数名，那么映射关系中的参数名就是源码中的参数名
+ * </li>
+ * <li>
+ *   如果编译后抹去了真实的方法参数名，那么映射关系中的参数名就是 arg0 arg1这种，
+ *   这个时候无论是替换的${} 还是占位符#{}，都要写成arg0 arg1这种形式
+ * </li>
+ * </p>
+ * <p>
+ *   如果没有启用参数名，那么就直接使用参数的下标值拿来做映射
+ * </p>
+ *
+ * <p>
+ *    在实际使用中，会增加一种param0 param1的形式，${param1} 或者#{param1}
+ *    参见 {@link #getNamedParams(Object[])}        <br/>
+ *
+ *   没有使用@Param注解，并且就一个参数时，是不需要转换成一个参数Map的
+ * </p>
+ *
+ */
+
 public class ParamNameResolver {
 
   public static final String GENERIC_NAME_PREFIX = "param";
@@ -49,24 +81,32 @@ public class ParamNameResolver {
    * <li>aMethod(int a, int b) -&gt; {{0, "0"}, {1, "1"}}</li>
    * <li>aMethod(int a, RowBounds rb, int b) -&gt; {{0, "0"}, {2, "1"}}</li>
    * </ul>
+   *
    */
   private final SortedMap<Integer, String> names;
 
   private boolean hasParamAnnotation;
 
   public ParamNameResolver(Configuration config, Method method) {
+    // 配置中获取是否使用真实参数名
     this.useActualParamName = config.isUseActualParamName();
+    // 获取参数类型数组
     final Class<?>[] paramTypes = method.getParameterTypes();
+
+    // 一个参数可以有多个Annotation,每个参数是一维
     final Annotation[][] paramAnnotations = method.getParameterAnnotations();
     final SortedMap<Integer, String> map = new TreeMap<>();
     int paramCount = paramAnnotations.length;
     // get names from @Param annotations
+    // 从@Param注解获取参数名
     for (int paramIndex = 0; paramIndex < paramCount; paramIndex++) {
       if (isSpecialParameter(paramTypes[paramIndex])) {
         // skip special parameters
+        // 跳过RowBounds ResultHandler
         continue;
       }
       String name = null;
+      // 找到就跑
       for (Annotation annotation : paramAnnotations[paramIndex]) {
         if (annotation instanceof Param) {
           hasParamAnnotation = true;
@@ -76,12 +116,15 @@ public class ParamNameResolver {
       }
       if (name == null) {
         // @Param was not specified.
+        // 没指定@Param 是否使用真是的参数名
         if (useActualParamName) {
           name = getActualParamName(method, paramIndex);
         }
         if (name == null) {
           // use the parameter index as the name ("0", "1", ...)
           // gcode issue #71
+          // 不使用的真实参数名就用数字来表示
+          // 如果走到这里的话
           name = String.valueOf(map.size());
         }
       }
@@ -124,17 +167,22 @@ public class ParamNameResolver {
     if (args == null || paramCount == 0) {
       return null;
     } else if (!hasParamAnnotation && paramCount == 1) {
+      // 没有Param注解的，并且仅有一个参数
       Object value = args[names.firstKey()];
       return wrapToMapIfCollection(value, useActualParamName ? names.get(0) : null);
     } else {
+      // 有Param注解，或者参数大于一个
       final Map<String, Object> param = new ParamMap<>();
       int i = 0;
       for (Map.Entry<Integer, String> entry : names.entrySet()) {
+        // names的key是0～N，value是真实参数名｜参数的index｜@Param
+        // 这个会是原始参数名和值的影色关系，或者arg0这种作为ParamMap的key，或者 0 1 作为key
         param.put(entry.getValue(), args[entry.getKey()]);
         // add generic param names (param1, param2, ...)
         final String genericParamName = GENERIC_NAME_PREFIX + (i + 1);
         // ensure not to overwrite parameter named with @Param
         if (!names.containsValue(genericParamName)) {
+          // 增加param0 param1作为key
           param.put(genericParamName, args[entry.getKey()]);
         }
         i++;
@@ -154,19 +202,23 @@ public class ParamNameResolver {
    */
   public static Object wrapToMapIfCollection(Object object, String actualParamName) {
     if (object instanceof Collection) {
+      //如果是一个集合，将其转成ParamMap
       ParamMap<Object> map = new ParamMap<>();
       map.put("collection", object);
       if (object instanceof List) {
         map.put("list", object);
       }
       Optional.ofNullable(actualParamName).ifPresent(name -> map.put(name, object));
+      // 同一个参数，有可能会塞进去三个entry
       return map;
     } else if (object != null && object.getClass().isArray()) {
+      // 如果是数组的话，有可能塞进去两个
       ParamMap<Object> map = new ParamMap<>();
       map.put("array", object);
       Optional.ofNullable(actualParamName).ifPresent(name -> map.put(name, object));
       return map;
     }
+    // 既不是Collection 也不是数组 ，那就是Map，或者普通的对象，基本类型
     return object;
   }
 

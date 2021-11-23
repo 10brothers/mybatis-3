@@ -23,6 +23,8 @@ import org.apache.ibatis.scripting.ScriptingException;
 import org.apache.ibatis.type.SimpleTypeRegistry;
 
 /**
+ * 编写的sql内容中，作为xml文本节点的sql片段，且包含${}展位符的
+ *
  * @author Clinton Begin
  */
 public class TextSqlNode implements SqlNode {
@@ -38,6 +40,10 @@ public class TextSqlNode implements SqlNode {
     this.injectionFilter = injectionFilter;
   }
 
+  /**
+   * 文本sql节点，是否静态是通过校验有没有 ${} 存在，不存在就是静态
+   * @return
+   */
   public boolean isDynamic() {
     DynamicCheckerTokenParser checker = new DynamicCheckerTokenParser();
     GenericTokenParser parser = createParser(checker);
@@ -45,6 +51,9 @@ public class TextSqlNode implements SqlNode {
     return checker.isDynamic();
   }
 
+  /**
+   * 这个apply方法需要把${} 替换对应方法参数传递的值
+   */
   @Override
   public boolean apply(DynamicContext context) {
     GenericTokenParser parser = createParser(new BindingTokenParser(context, injectionFilter));

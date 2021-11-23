@@ -29,6 +29,13 @@ import org.apache.ibatis.scripting.defaults.RawSqlSource;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ *
+ * 支持XML的语言驱动，主要用来创建SqlSource以及创建对应的ParameterHandler，也就是默认的ParameterHandler
+ *
+ * 在解析xml形式的SQL内容或者注解形式的SQL内容时，都是这个入口来创建SqlSource的
+ *
+ * MapperAnnotationBuilder 和 XMLMapperBuilder都会使用 createSqlSource来创建SqlSource对象
+ *
  * @author Eduardo Macarron
  */
 public class XMLLanguageDriver implements LanguageDriver {

@@ -1,0 +1,3 @@
+# 事务相关
+mybatis本身实现的事务很简单，就是纯JDBC的事务
+如果单独使用mybatis的话，需要主动调用其begin commit等方法

@@ -96,14 +96,25 @@ public class XMLConfigBuilder extends BaseBuilder {
       throw new BuilderException("Each XMLConfigBuilder can only be used once.");
     }
     parsed = true;
+    // 根节点 configuration
     parseConfiguration(parser.evalNode("/configuration"));
     return configuration;
   }
 
+  /**
+   * 对于XML文件的解析，都在这里了
+   */
   private void parseConfiguration(XNode root) {
     try {
       // issue #117 read properties first
+      // 解析 properties节点的配置，properties其实就是相当于一个Properties来对待的
+      // 这里配置的Properties，在后面的可以使用 ${}的方式在后面的xml配置中使用
+      // 当然这里不配置Properties节点，通过向SqlSessionFactoryBuilder传递一个Properties对象也是可以的
       propertiesElement(root.evalNode("properties"));
+
+      /*
+       settings节点是用来控制mybatis运行时的一些行为的
+       */
       Properties settings = settingsAsProperties(root.evalNode("settings"));
       loadCustomVfs(settings);
       loadCustomLogImpl(settings);
@@ -130,6 +141,8 @@ public class XMLConfigBuilder extends BaseBuilder {
     Properties props = context.getChildrenAsProperties();
     // Check that all settings are known to the configuration class
     MetaClass metaConfig = MetaClass.forClass(Configuration.class, localReflectorFactory);
+
+    // 校验是不是有未知setting
     for (Object key : props.keySet()) {
       if (!metaConfig.hasSetter(String.valueOf(key))) {
         throw new BuilderException("The setting " + key + " is not known.  Make sure you spelled it correctly (case sensitive).");
@@ -219,6 +232,11 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   *  context就是对应的XNode节点
+   *
+   *  properties节点有两个属性，resource和url，用于指定一个Properties文件路径或者远程文件流，不能同时存在
+   */
   private void propertiesElement(XNode context) throws Exception {
     if (context != null) {
       Properties defaults = context.getChildrenAsProperties();
@@ -232,11 +250,14 @@ public class XMLConfigBuilder extends BaseBuilder {
       } else if (url != null) {
         defaults.putAll(Resources.getUrlAsProperties(url));
       }
+
+      // 如果Configuration中已经有了variables这个属性，则加入到Properties，也就是说 Configuration中的variables就是一些配置的Properties
       Properties vars = configuration.getVariables();
       if (vars != null) {
         defaults.putAll(vars);
       }
       parser.setVariables(defaults);
+      // 重新设置变量 variables
       configuration.setVariables(defaults);
     }
   }
@@ -361,16 +382,22 @@ public class XMLConfigBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 基于xml配置的也是可以用使用注解的Mapper
+   */
   private void mapperElement(XNode parent) throws Exception {
     if (parent != null) {
       for (XNode child : parent.getChildren()) {
+        // 如果直接指定的是一个package，那么就默认使用的是注解的方式
         if ("package".equals(child.getName())) {
           String mapperPackage = child.getStringAttribute("name");
           configuration.addMappers(mapperPackage);
         } else {
+          // 定义mapper的方式有三种 resource和url指定xml，class则是指定Mapper接口的全限定路径，且是注解的形式
           String resource = child.getStringAttribute("resource");
           String url = child.getStringAttribute("url");
           String mapperClass = child.getStringAttribute("class");
+          // 如果使用的resource来指定
           if (resource != null && url == null && mapperClass == null) {
             ErrorContext.instance().resource(resource);
             try(InputStream inputStream = Resources.getResourceAsStream(resource)) {
@@ -378,6 +405,7 @@ public class XMLConfigBuilder extends BaseBuilder {
               mapperParser.parse();
             }
           } else if (resource == null && url != null && mapperClass == null) {
+            // 如果使用的url的方式来指定xml资源路径
             ErrorContext.instance().resource(url);
             try(InputStream inputStream = Resources.getUrlAsStream(url)){
               XMLMapperBuilder mapperParser = new XMLMapperBuilder(inputStream, configuration, url, configuration.getSqlFragments());
@@ -385,6 +413,9 @@ public class XMLConfigBuilder extends BaseBuilder {
             }
           } else if (resource == null && url == null && mapperClass != null) {
             Class<?> mapperInterface = Resources.classForName(mapperClass);
+            // 如果以上都不是的话，那mapper的xml配置默认到和接口同目录下去查找，并且配置文件名和接口名一致
+            // 如果没有找到这个规则的配置文件，则会去使用注解的方式试着解析
+            // 在利用MapperScan时，是通过直接调用addMapper的方式来处理的
             configuration.addMapper(mapperInterface);
           } else {
             throw new BuilderException("A mapper element may only specify a url, resource or class, but not more than one.");

@@ -38,10 +38,25 @@ public final class MappedStatement {
   private String id;
   private Integer fetchSize;
   private Integer timeout;
+  /**
+   * 语句类型。为Statement  PrepareStatement Callback三种
+   */
   private StatementType statementType;
+  /**
+   * 从结果集ResultSet中检索数据时，游标的行为，比如只能向前，可以双向移动等
+   */
   private ResultSetType resultSetType;
+
+  /**
+   * sql源
+   */
   private SqlSource sqlSource;
+
+  /**
+   * 缓存
+   */
   private Cache cache;
+
   private ParameterMap parameterMap;
   private List<ResultMap> resultMaps;
   private boolean flushCacheRequired;

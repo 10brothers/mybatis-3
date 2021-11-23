@@ -30,11 +30,18 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 /**
+ *
+ * 创建动态SQL的，如果编写的SQL内容被包裹在script标签内，那么使用此类来创建SqlSource
+ *
  * @author Clinton Begin
  */
 public class XMLScriptBuilder extends BaseBuilder {
 
   private final XNode context;
+
+  /**
+   * sql文本是动态的还是静态的，如果存在${} 那就是
+   */
   private boolean isDynamic;
   private final Class<?> parameterType;
   private final Map<String, NodeHandler> nodeHandlerMap = new HashMap<>();
@@ -79,16 +86,23 @@ public class XMLScriptBuilder extends BaseBuilder {
     NodeList children = node.getNode().getChildNodes();
     for (int i = 0; i < children.getLength(); i++) {
       XNode child = node.newXNode(children.item(i));
+      // 这里是针对xml的配置，如果子节点的节点类型为CDATA 或者 TEXT_NODE的话
       if (child.getNode().getNodeType() == Node.CDATA_SECTION_NODE || child.getNode().getNodeType() == Node.TEXT_NODE) {
         String data = child.getStringBody("");
         TextSqlNode textSqlNode = new TextSqlNode(data);
+
+        // TextSqlNode判断是否为动态的依据是，是否有${}占位符，如果有就是动态，如果没有，就是静态
+        // 为什么没有判断#{}？ 因为这个是prepare语句的占位符，而${}要涉及SQL语句的改写，所以是动态的
         if (textSqlNode.isDynamic()) {
+          // 如果是一段包含${}的文本，直接就是本身
           contents.add(textSqlNode);
           isDynamic = true;
         } else {
           contents.add(new StaticTextSqlNode(data));
         }
       } else if (child.getNode().getNodeType() == Node.ELEMENT_NODE) { // issue #628
+        // 如果是 if where trim foreach choose when set  bind 标签
+        // 也是一个动态SQL，并且需要对每个标签做个处理
         String nodeName = child.getNode().getNodeName();
         NodeHandler handler = nodeHandlerMap.get(nodeName);
         if (handler == null) {

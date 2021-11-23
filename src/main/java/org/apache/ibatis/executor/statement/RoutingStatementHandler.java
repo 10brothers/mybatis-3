@@ -30,6 +30,9 @@ import org.apache.ibatis.session.ResultHandler;
 import org.apache.ibatis.session.RowBounds;
 
 /**
+ * 这个StatementHandler不负责具体的处理Statement，而是一个路由的功能，有点类似于CachingExecutor，
+ * 根据从{@link MappedStatement#getStatementType}获取的statement的类型，来决定创建哪一种statement。
+ *
  * @author Clinton Begin
  */
 public class RoutingStatementHandler implements StatementHandler {

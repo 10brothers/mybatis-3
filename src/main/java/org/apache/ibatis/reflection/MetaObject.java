@@ -29,6 +29,20 @@ import org.apache.ibatis.reflection.wrapper.ObjectWrapperFactory;
 
 /**
  * @author Clinton Begin
+ *
+ *
+ * 用来操作一个给定的对象的，这个操作主要有两个，一个是查询，一个是更新
+ *
+ * getValue  和 setValue
+ *
+ * 通过给定的name，对其对应的Field进行查询或者更新操作，这个name，实际上是一个表达式 a.b.c的表达式
+ *
+ * 对代理对象或者获取普通对象的引用类型的域的值，可以一直级联下去
+ *
+ * 其级联的方式也很简单，首先找到第一个域的对象，然后使用这个对象构造一个MetaObject，再去重复操作
+ *
+ * 这个实际上就是递归的操作了
+ *
  */
 public class MetaObject {
 

@@ -34,6 +34,8 @@ public final class OgnlCache {
 
   private static final OgnlMemberAccess MEMBER_ACCESS = new OgnlMemberAccess();
   private static final OgnlClassResolver CLASS_RESOLVER = new OgnlClassResolver();
+
+  // 缓存表达式
   private static final Map<String, Object> expressionCache = new ConcurrentHashMap<>();
 
   private OgnlCache() {
@@ -43,6 +45,7 @@ public final class OgnlCache {
   public static Object getValue(String expression, Object root) {
     try {
       Map context = Ognl.createDefaultContext(root, MEMBER_ACCESS, CLASS_RESOLVER, null);
+      // 使用OGNL来从 DynamicContext对象中查找指定的表达式的值，一般这里是通过给定的写在sql中 ${xxx}的xxx来到ParamMap中查到其值
       return Ognl.getValue(parseExpression(expression), context, root);
     } catch (OgnlException e) {
       throw new BuilderException("Error evaluating expression '" + expression + "'. Cause: " + e, e);

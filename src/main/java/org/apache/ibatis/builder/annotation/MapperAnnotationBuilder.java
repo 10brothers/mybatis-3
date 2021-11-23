@@ -91,6 +91,10 @@ import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.UnknownTypeHandler;
 
 /**
+ *
+ * 使用接口+@Mapper的方式时，通过MapperRegistry接口addMapper方法解析处理。
+ *
+ *
  * @author Clinton Begin
  * @author Kazuki Shimizu
  */
@@ -106,6 +110,7 @@ public class MapperAnnotationBuilder {
   private final Class<?> type;
 
   public MapperAnnotationBuilder(Configuration configuration, Class<?> type) {
+    // 构造一个猜测的资源文件目录，从class还原为java文件资源
     String resource = type.getName().replace('.', '/') + ".java (best guess)";
     this.assistant = new MapperBuilderAssistant(configuration, resource);
     this.configuration = configuration;
@@ -114,8 +119,11 @@ public class MapperAnnotationBuilder {
 
   public void parse() {
     String resource = type.toString();
-    if (!configuration.isResourceLoaded(resource)) {
+    // addMapper时，resource实际上是Class的toString字符串
+    if (!configuration.isResourceLoaded(resource)){
+      // 根据Mapper接口的全限定名替换.为/作为路径，试图解析对应的xml配置资源，如果有的话就解析xml文件
       loadXmlResource();
+      // 之后把 interface xxx的resource也加入已进loaded
       configuration.addLoadedResource(resource);
       assistant.setCurrentNamespace(type.getName());
       parseCache();
@@ -124,6 +132,7 @@ public class MapperAnnotationBuilder {
         if (!canHaveStatement(method)) {
           continue;
         }
+        // 如果有Select或者 SelectProvider 以及ResultMap 注解
         if (getAnnotationWrapper(method, false, Select.class, SelectProvider.class).isPresent()
             && method.getAnnotation(ResultMap.class) == null) {
           parseResultMap(method);
@@ -138,6 +147,9 @@ public class MapperAnnotationBuilder {
     parsePendingMethods();
   }
 
+  /**
+   * 非桥接方法和默认方法，才会被解析
+   */
   private boolean canHaveStatement(Method method) {
     // issue #237
     return !method.isBridge() && !method.isDefault();
@@ -158,23 +170,33 @@ public class MapperAnnotationBuilder {
     }
   }
 
+  /**
+   * 这里是尝试从定义的Mapper接口的同包下面查找和Mapper接口同名的xml配置文件，
+   * 如果能找到，就使用XMLMapperBuilder的方式来解析
+   */
   private void loadXmlResource() {
     // Spring may not know the real resource name so we check a flag
     // to prevent loading again a resource twice
     // this flag is set at XMLMapperBuilder#bindMapperForNamespace
+    // XML配置时，也需要调用addMapper方法，在调用addMapper前会在XMLMapperBuilder#bindMapperForNamespace中设置资源 namespace:type.getName
+    // 这段逻辑其实是为了xml配置时，mapper使用了属性class来进行配置，这个时候xml的路径默认是和接口同目录，并且同名
+    // 通过mapper resource 或者 mapper url 都不会再走这段逻辑
     if (!configuration.isResourceLoaded("namespace:" + type.getName())) {
       String xmlResource = type.getName().replace('.', '/') + ".xml";
       // #1347
+      // 从Mapper接口所在的同目录下搜索接口同名的xml文件
       InputStream inputStream = type.getResourceAsStream("/" + xmlResource);
       if (inputStream == null) {
         // Search XML mapper that is not in the module but in the classpath.
         try {
+          // 从classpath中搜索
           inputStream = Resources.getResourceAsStream(type.getClassLoader(), xmlResource);
         } catch (IOException e2) {
           // ignore, resource is not required
         }
       }
       if (inputStream != null) {
+        //根据接口名能找到对应的xml文件，解析之。这种情况下namespace就是接口的全限定名
         XMLMapperBuilder xmlParser = new XMLMapperBuilder(inputStream, assistant.getConfiguration(), xmlResource, configuration.getSqlFragments(), type.getName());
         xmlParser.parse();
       }
@@ -297,10 +319,14 @@ public class MapperAnnotationBuilder {
     final Class<?> parameterTypeClass = getParameterType(method);
     final LanguageDriver languageDriver = getLanguageDriver(method);
 
+    /**
+     * 没有注解的话，就不会执行，这段代码需要重构了
+     */
     getAnnotationWrapper(method, true, statementAnnotationTypes).ifPresent(statementAnnotation -> {
       final SqlSource sqlSource = buildSqlSource(statementAnnotation.getAnnotation(), parameterTypeClass, languageDriver, method);
       final SqlCommandType sqlCommandType = statementAnnotation.getSqlCommandType();
       final Options options = getAnnotationWrapper(method, false, Options.class).map(x -> (Options)x.getAnnotation()).orElse(null);
+      // 构造一个mappedStatementId，用于唯一标识一个 MappedStatement
       final String mappedStatementId = type.getName() + "." + method.getName();
 
       final KeyGenerator keyGenerator;
@@ -614,6 +640,10 @@ public class MapperAnnotationBuilder {
     return answer;
   }
 
+  /**
+   * 通过注解中的SQL语句，对应的参数类型等，还有其对应的方法Method来构造一个SqlSource
+   * 最终是委托给LanguageDriver的实现类来进行构造的
+   */
   private SqlSource buildSqlSource(Annotation annotation, Class<?> parameterType, LanguageDriver languageDriver,
       Method method) {
     if (annotation instanceof Select) {
@@ -635,6 +665,9 @@ public class MapperAnnotationBuilder {
     return languageDriver.createSqlSource(configuration, String.join(" ", strings).trim(), parameterTypeClass);
   }
 
+  /**
+   *  方法Method是否有注解 Select Insert Update Delete SelectProvider InsertProvider UpdateProvider DeleteProvider
+   */
   @SafeVarargs
   private final Optional<AnnotationWrapper> getAnnotationWrapper(Method method, boolean errorIfNoMatch,
       Class<? extends Annotation>... targetTypes) {

@@ -32,6 +32,14 @@ import org.apache.ibatis.transaction.TransactionFactory;
 import org.apache.ibatis.transaction.managed.ManagedTransactionFactory;
 
 /**
+ *
+ * SqlSessionFactory 的默认实现，SqlSessionFactory的唯一作用就是开启一个SqlSession
+ *
+ * 这个 SqlSession要负责开启连接，以及管理事务，执行查询操作，返回查询结果
+ *
+ * 是Mybatis中最重要的类之一，也可以算作是mybatis中的一个入口类，有了SqlSessionFactory类才能获取SqlSession，
+ * 有了SqlSession才能去获取Mapper代理对象，获取Connection等，然后执行Sql操作
+ *
  * @author Clinton Begin
  */
 public class DefaultSqlSessionFactory implements SqlSessionFactory {

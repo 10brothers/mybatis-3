@@ -18,6 +18,9 @@ package org.apache.ibatis.reflection.invoker;
 import java.lang.reflect.InvocationTargetException;
 
 /**
+ *
+ * 为了通过反射调用 setter getter 和method做了一个统一的封装
+ *
  * @author Clinton Begin
  */
 public interface Invoker {

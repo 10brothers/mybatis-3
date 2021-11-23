@@ -16,6 +16,10 @@
 package org.apache.ibatis.scripting.xmltags;
 
 /**
+ * 静态文本SQL，在编码的sql中，使用xml解析的结果是一个纯文本节点，也就是不含xml标签。
+ * 此纯文本节点可以有展位符#{} 不能有${}
+ *
+ *
  * @author Clinton Begin
  */
 public class StaticTextSqlNode implements SqlNode {

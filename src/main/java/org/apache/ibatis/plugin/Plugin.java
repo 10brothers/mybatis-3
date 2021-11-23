@@ -27,6 +27,9 @@ import org.apache.ibatis.reflection.ExceptionUtil;
 import org.apache.ibatis.util.MapUtil;
 
 /**
+ *
+ * mybatis的插件逻辑，Plugin里面有对应的Interceptor对象，和需要被拦截处理
+ *
  * @author Clinton Begin
  */
 public class Plugin implements InvocationHandler {
@@ -57,10 +60,12 @@ public class Plugin implements InvocationHandler {
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     try {
+      // 当前调用的方法是否是在当前拦截器中定义的需要被拦截的方法
       Set<Method> methods = signatureMap.get(method.getDeclaringClass());
       if (methods != null && methods.contains(method)) {
         return interceptor.intercept(new Invocation(target, method, args));
       }
+      // 不需要被拦截处理就直接调用
       return method.invoke(target, args);
     } catch (Exception e) {
       throw ExceptionUtil.unwrapThrowable(e);

@@ -84,6 +84,7 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   private XMLMapperBuilder(XPathParser parser, Configuration configuration, String resource, Map<String, XNode> sqlFragments) {
     super(configuration);
+    // 这个builderAssistant是每个XMLMapperBuilder一个实例，也就意味着一个xml或者Mapper接口类对应一个
     this.builderAssistant = new MapperBuilderAssistant(configuration, resource);
     this.parser = parser;
     this.sqlFragments = sqlFragments;
@@ -92,10 +93,14 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   public void parse() {
     if (!configuration.isResourceLoaded(resource)) {
+      // 这一步主要是生成MappedStatement对象
       configurationElement(parser.evalNode("/mapper"));
       configuration.addLoadedResource(resource);
+      // 这里试图根据namespace， 找到对应的接口去解析
+      // 如果namespace刚好是某个接口的全限定名并且还未解析，那么就会解析
       bindMapperForNamespace();
     }
+
 
     parsePendingResultMaps();
     parsePendingCacheRefs();
@@ -106,6 +111,10 @@ public class XMLMapperBuilder extends BaseBuilder {
     return sqlFragments.get(refid);
   }
 
+  /**
+   * 用来实际上去构建一个 MappedStatement
+   * @param context
+   */
   private void configurationElement(XNode context) {
     try {
       String namespace = context.getStringAttribute("namespace");
@@ -113,11 +122,14 @@ public class XMLMapperBuilder extends BaseBuilder {
         throw new BuilderException("Mapper's namespace cannot be empty");
       }
       builderAssistant.setCurrentNamespace(namespace);
+      // 下面这几个是处理mapper.xml下面的节点，一些复杂的parameterMap或者resultMap，就单独定义
+      // 然后再进行引用
       cacheRefElement(context.evalNode("cache-ref"));
       cacheElement(context.evalNode("cache"));
       parameterMapElement(context.evalNodes("/mapper/parameterMap"));
       resultMapElements(context.evalNodes("/mapper/resultMap"));
       sqlElement(context.evalNodes("/mapper/sql"));
+      // 处理 select insert update delete这几个节点元素的内容
       buildStatementFromContext(context.evalNodes("select|insert|update|delete"));
     } catch (Exception e) {
       throw new BuilderException("Error parsing Mapper XML. The XML location is '" + resource + "'. Cause: " + e, e);
@@ -133,6 +145,7 @@ public class XMLMapperBuilder extends BaseBuilder {
 
   private void buildStatementFromContext(List<XNode> list, String requiredDatabaseId) {
     for (XNode context : list) {
+      // XMLStatementBuilder  用来构建MappedStatement，并且保存到 Configuration
       final XMLStatementBuilder statementParser = new XMLStatementBuilder(configuration, builderAssistant, context, requiredDatabaseId);
       try {
         statementParser.parseStatementNode();
@@ -415,11 +428,16 @@ public class XMLMapperBuilder extends BaseBuilder {
     }
   }
 
+  /**
+   * 如果mapper.xml中指定的namespace是某个Mapper接口的全限定名的话，会尝试通过addMapper的方式解析此Mapper接口
+   */
   private void bindMapperForNamespace() {
     String namespace = builderAssistant.getCurrentNamespace();
     if (namespace != null) {
       Class<?> boundType = null;
       try {
+        // 假设namespace使用的是Mapper接口的全限定名，试图加载
+        // 如果namespace不是接口的全限定名，那就没法生成一个对象了
         boundType = Resources.classForName(namespace);
       } catch (ClassNotFoundException e) {
         // ignore, bound type is not required
@@ -428,6 +446,9 @@ public class XMLMapperBuilder extends BaseBuilder {
         // Spring may not know the real resource name so we set a flag
         // to prevent loading again this resource from the mapper interface
         // look at MapperAnnotationBuilder#loadXmlResource
+
+        // 标记此接口以解析，避免重复解析
+        // 所以这里看，接口和xml，可以通过namespace交错嵌套下去
         configuration.addLoadedResource("namespace:" + namespace);
         configuration.addMapper(boundType);
       }

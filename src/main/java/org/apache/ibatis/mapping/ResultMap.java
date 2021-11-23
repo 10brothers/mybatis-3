@@ -32,6 +32,9 @@ import org.apache.ibatis.reflection.ParamNameUtil;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ *
+ * ResultMap是定义xml中的ResultMap的
+ *
  * @author Clinton Begin
  */
 public class ResultMap {

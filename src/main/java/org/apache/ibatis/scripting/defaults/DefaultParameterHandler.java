@@ -33,6 +33,10 @@ import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
+ *
+ * 默认的ParameterHandler，如果实现了自己的TypeHandler，
+ * 在这个类的setParameters方法中，会去匹配合适的进行TypeHandler处理
+ *
  * @author Clinton Begin
  * @author Eduardo Macarron
  */

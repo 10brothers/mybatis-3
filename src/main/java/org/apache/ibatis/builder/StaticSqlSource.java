@@ -23,6 +23,9 @@ import org.apache.ibatis.mapping.SqlSource;
 import org.apache.ibatis.session.Configuration;
 
 /**
+ *
+ *  纯静态SqlSource，这时的SQL语句跟mybatis没有任何关系了，相当于在直接使用jdbc时那种sql写法了。
+ *
  * @author Clinton Begin
  */
 public class StaticSqlSource implements SqlSource {

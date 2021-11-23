@@ -18,6 +18,9 @@ package org.apache.ibatis.scripting.xmltags;
 import java.util.List;
 
 /**
+ *
+ * 混合SqlNode 用于表示多个同层级的SqlNode，依次执行apply方法
+ *
  * @author Clinton Begin
  */
 public class MixedSqlNode implements SqlNode {

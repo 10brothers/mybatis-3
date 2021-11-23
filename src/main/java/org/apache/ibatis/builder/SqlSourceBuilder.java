@@ -30,6 +30,12 @@ import org.apache.ibatis.session.Configuration;
 import org.apache.ibatis.type.JdbcType;
 
 /**
+ *
+ * SqlSource建造器
+ * 在处理过SqlNode后，会得到一个原始的sql语句，这个sql语句可能还存在#{}展位符，
+ * 如果存在展位符，需要处理展位符，每个展位符都最终会生成一个ParameterMapping ，
+ * 然后ParameterMapping按展位符顺序放到ArrayList列表中，与处理的SQL语句中？展位符相对应
+ *
  * @author Clinton Begin
  */
 public class SqlSourceBuilder extends BaseBuilder {
@@ -40,6 +46,10 @@ public class SqlSourceBuilder extends BaseBuilder {
     super(configuration);
   }
 
+  /**
+   *  将一个SQL语句，解析成StaticSqlSource，这里会将原先的Sql语句中的占位符#{}进行替换成 ?
+   *  如果存在${}，则会进行值的替换， 如果
+   */
   public SqlSource parse(String originalSql, Class<?> parameterType, Map<String, Object> additionalParameters) {
     ParameterMappingTokenHandler handler = new ParameterMappingTokenHandler(configuration, parameterType, additionalParameters);
     GenericTokenParser parser = new GenericTokenParser("#{", "}", handler);
@@ -82,12 +92,21 @@ public class SqlSourceBuilder extends BaseBuilder {
       return parameterMappings;
     }
 
+    /**
+     * 这里构建了一个ParameterMapping对象，并且返回一个 ? 也就是一个占位符
+     *
+     * 将占位符的参数名拿出来 并且将占位符替换成问号
+     *
+     */
     @Override
     public String handleToken(String content) {
       parameterMappings.add(buildParameterMapping(content));
       return "?";
     }
 
+    /**
+     * 这个方法是解析写在sql文本内的 #{property, jdbcType=int,typeHandler} ，将其解析成一个{@link ParameterMapping}<br />
+     */
     private ParameterMapping buildParameterMapping(String content) {
       Map<String, String> propertiesMap = parseParameterMapping(content);
       String property = propertiesMap.get("property");

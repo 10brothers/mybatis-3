@@ -23,19 +23,58 @@ import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
+ *  描述了方法的参数信息，属性名，参数类型的JavaType JdbcType typeHandler等信息,
+ *  定义ParameterMapping的方式有两种，
+ *  <li>
+ *  xml标签 &lt;parameterMap&gt; 配合属性parameterMap
+ *  </li>
+ *  <li>
+ *  另外一种方式就是使用参数时的 #{property,jdbcType= , typeHandler= } 这种方式
+ *  </li>
  * @author Clinton Begin
  */
 public class ParameterMapping {
 
+  /**
+   * Configuration信息
+   */
   private Configuration configuration;
 
+  /**
+   * 属性名
+   */
   private String property;
+
+  /**
+   * 参数类型 In 入参 OUT 出参 INOUT 出入参
+   */
   private ParameterMode mode;
+
+  /**
+   * 参数对应的JavaType
+   */
   private Class<?> javaType = Object.class;
+
+  /**
+   * 参数的JdbcType
+   */
   private JdbcType jdbcType;
+
+  /**
+   * 数字范围
+   */
   private Integer numericScale;
+
+  /**
+   * 此参数对应的TypeHandler，如果没有指定，会自己根据类型从所有的TypeHandler中查找
+   */
   private TypeHandler<?> typeHandler;
+
+  /**
+   * 这个应该是xml配置中对应的定义的ResultMap
+   */
   private String resultMapId;
+
   private String jdbcTypeName;
   private String expression;
 

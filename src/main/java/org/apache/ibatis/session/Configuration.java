@@ -97,11 +97,20 @@ import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
  * @author Clinton Begin
+ *
+ * mybatis中的一个中心，保存了所有的mybatis运行时需要的信息
+ *
+ * 如果是xml配置的话，这个类在读取xml时生成
+ *
  */
 public class Configuration {
 
   protected Environment environment;
 
+  /**
+   * 所有的setting标签要设置的属性
+   */
+  //  -------------  settings
   protected boolean safeRowBoundsEnabled;
   protected boolean safeResultHandlerEnabled = true;
   protected boolean mapUnderscoreToCamelCase;
@@ -112,29 +121,48 @@ public class Configuration {
   protected boolean cacheEnabled = true;
   protected boolean callSettersOnNulls;
   protected boolean useActualParamName = true;
-  protected boolean returnInstanceForEmptyRow;
-  protected boolean shrinkWhitespacesInSql;
+  protected boolean returnInstanceForEmptyRow; // 如果没有查到结果，是返回实例对象还是null
+  protected boolean shrinkWhitespacesInSql; // 将sql语句中的空格收缩
 
   protected String logPrefix;
-  protected Class<? extends Log> logImpl;
-  protected Class<? extends VFS> vfsImpl;
-  protected Class<?> defaultSqlProviderType;
-  protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;
-  protected JdbcType jdbcTypeForNull = JdbcType.OTHER;
+  protected Class<? extends Log> logImpl; // 自定义log日志实现类
+  protected Class<? extends VFS> vfsImpl; // 自定义资源访问实现类
+  protected Class<?> defaultSqlProviderType; // 默认sql提供器类型
+  protected LocalCacheScope localCacheScope = LocalCacheScope.SESSION;  // 缓存的范围
+  protected JdbcType jdbcTypeForNull = JdbcType.OTHER; // 空类型
   protected Set<String> lazyLoadTriggerMethods = new HashSet<>(Arrays.asList("equals", "clone", "hashCode", "toString"));
-  protected Integer defaultStatementTimeout;
-  protected Integer defaultFetchSize;
-  protected ResultSetType defaultResultSetType;
-  protected ExecutorType defaultExecutorType = ExecutorType.SIMPLE;
-  protected AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL;
-  protected AutoMappingUnknownColumnBehavior autoMappingUnknownColumnBehavior = AutoMappingUnknownColumnBehavior.NONE;
+  protected Integer defaultStatementTimeout;  // 语句执行超时时间
+  protected Integer defaultFetchSize;  // 检索大小，控制每次返回的数据量
+  protected ResultSetType defaultResultSetType; // 默认结果集类型，主要是怎么从结果集上寻找数据，游标的行为
+  protected ExecutorType defaultExecutorType = ExecutorType.SIMPLE; // 执行器类型，默认简单
+  protected AutoMappingBehavior autoMappingBehavior = AutoMappingBehavior.PARTIAL; // 字段和列的主动映射方式，默认不处理内嵌对象
+  protected AutoMappingUnknownColumnBehavior autoMappingUnknownColumnBehavior = AutoMappingUnknownColumnBehavior.NONE; // 未知的列或者属性时，什么都不做
+  //-------------- settings
 
+  /**
+   * 设置的一些用于其他的标签使用的配置，其他配置可以通过${}的方式进行引用
+   *
+   * 通过Configuration设置的一些属性信息
+   */
   protected Properties variables = new Properties();
+
+  /**
+   * 默认的反射器工厂，Reflector的作用主要是通过反射的方式来将一个类的getter setter方法都给找出来
+   */
   protected ReflectorFactory reflectorFactory = new DefaultReflectorFactory();
+
+  /**
+   * 对象工厂，主要目的是通过反射的方式来创建对象，有普通对象也有 Collection Map Optional等
+   */
   protected ObjectFactory objectFactory = new DefaultObjectFactory();
+
   protected ObjectWrapperFactory objectWrapperFactory = new DefaultObjectWrapperFactory();
 
   protected boolean lazyLoadingEnabled = false;
+
+  /**
+   * 代理工厂，这个是为了在延迟加载时为Mapper对象创建一个代理对象，默认使用的Javassist
+   */
   protected ProxyFactory proxyFactory = new JavassistProxyFactory(); // #224 Using internal Javassist instead of OGNL
 
   protected String databaseId;
@@ -146,21 +174,64 @@ public class Configuration {
    */
   protected Class<?> configurationFactory;
 
+  /**
+   * Mapper注册器，通过addMapper方法，可以将一个接口去进行代理。
+   * 提供针对单个接口类进行addMapper，也支持一个包下的所有接口类作为Mapper接口，或者某些接口的子接口作为Mapper接口
+   * 提供getMapper，返回Mapper接口的代理对象。持有每个Mapper接口类和MapperProxyFactory的映射Map
+   */
   protected final MapperRegistry mapperRegistry = new MapperRegistry(this);
+
+  /**
+   * 拦截器链，自定义插件
+   */
   protected final InterceptorChain interceptorChain = new InterceptorChain();
+  /**
+   * 类型处理器，可以对参数类型处理，也可以对结果映射时做类型处理
+   */
   protected final TypeHandlerRegistry typeHandlerRegistry = new TypeHandlerRegistry(this);
+
+  /**
+   * 类型别名注册器，这个类型别名主要是对一个Entity起的一个别名，这样在XML配置中就可以直接写别名，不用写全限定名了
+   */
   protected final TypeAliasRegistry typeAliasRegistry = new TypeAliasRegistry();
+
+  /**
+   * 语言驱动器，用哪种语言来解析SQL语句，默认是XML
+   */
   protected final LanguageDriverRegistry languageRegistry = new LanguageDriverRegistry();
 
+  /**
+   * MappedStatement 每一个需要执行SQL操作的方法，都会被封装成一个MappedStatement，里面能获取到所有的关于此方法的信息，包括对应的参数信息，返回值信息等
+   * 这个map的key是用namespace+方法的signature共同构成的  namespace是在xml中配置的，如果是注解的形式就是方法的全限定路径
+   */
   protected final Map<String, MappedStatement> mappedStatements = new StrictMap<MappedStatement>("Mapped Statements collection")
       .conflictMessageProducer((savedValue, targetValue) ->
           ". please check " + savedValue.getResource() + " and " + targetValue.getResource());
+  /**
+   * 缓存
+   */
   protected final Map<String, Cache> caches = new StrictMap<>("Caches collection");
+
+  /**
+   * ResultMap
+   * 用来存放解析后的resultMap节点或者@ResultMap注解, key为定义的id或者生成的id
+   */
   protected final Map<String, ResultMap> resultMaps = new StrictMap<>("Result Maps collection");
+
+  /**
+   * 参数映射关系
+   */
   protected final Map<String, ParameterMap> parameterMaps = new StrictMap<>("Parameter Maps collection");
   protected final Map<String, KeyGenerator> keyGenerators = new StrictMap<>("Key Generators collection");
 
+  /**
+   * 已经加载的资源，String是资源名，每个不能重复，要么是xml文件，要么是存Java接口全限定名，如果是Java接口的全限定名会加namespace前缀
+   */
   protected final Set<String> loadedResources = new HashSet<>();
+
+  /**
+   * 这个就是xml配置中的 <sql></sql>标签
+   */
   protected final Map<String, XNode> sqlFragments = new StrictMap<>("XML fragments parsed from previous mappers");
 
   protected final Collection<XMLStatementBuilder> incompleteStatements = new LinkedList<>();
@@ -210,8 +281,8 @@ public class Configuration {
     typeAliasRegistry.registerAlias("CGLIB", CglibProxyFactory.class);
     typeAliasRegistry.registerAlias("JAVASSIST", JavassistProxyFactory.class);
 
-    languageRegistry.setDefaultDriverClass(XMLLanguageDriver.class);
-    languageRegistry.register(RawLanguageDriver.class);
+    languageRegistry.setDefaultDriverClass(XMLLanguageDriver.class); // 默认使用xml格式的语言解析驱动
+    languageRegistry.register(RawLanguageDriver.class); // 同时注册了一个原生语言解析驱动
   }
 
   public String getLogPrefix() {
@@ -765,6 +836,9 @@ public class Configuration {
   }
 
   public void addMappedStatement(MappedStatement ms) {
+    // 会为此MappedStatement保存两个不同的key
+    // 如果使用namespace+id的方式，就会有两个，分别是namespace+id ，以及id作为key
+    // 如果没有namespace就会保存一个id为key
     mappedStatements.put(ms.getId(), ms);
   }
 
@@ -837,6 +911,11 @@ public class Configuration {
     mapperRegistry.addMappers(packageName);
   }
 
+  /**
+   * 这个是注解的方式，来注入 Mapper
+   * @param type
+   * @param <T>
+   */
   public <T> void addMapper(Class<T> type) {
     mapperRegistry.addMapper(type);
   }

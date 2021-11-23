@@ -94,6 +94,8 @@ public class SimpleStatementHandler extends BaseStatementHandler {
   @Override
   public void parameterize(Statement statement) {
     // N/A
+    // 这里的参数化没有做任何操作，因为普通的Statement语句并不需要参数化，
+    // 所有的查询条件已经SQL中准备好了
   }
 
 }

@@ -19,12 +19,27 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 /**
+ *
+ * Invocation是对JDK动态代理调用的一个封装，
+ *
  * @author Clinton Begin
  */
 public class Invocation {
 
+  /**
+   * 被代理的对象，其实被代理的对象可能也是一个代理对象
+   *
+   */
   private final Object target;
+
+  /**
+   * 被调用的方法 Method 这个参数就是 Executor StatementHandler ParameterHandler ResultSetHandler里面的 一些可以被拦截的方法
+   */
   private final Method method;
+
+  /**
+   *  方法对应的参数数组
+   */
   private final Object[] args;
 
   public Invocation(Object target, Method method, Object[] args) {

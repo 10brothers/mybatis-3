@@ -39,6 +39,9 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSession;
 
 /**
+ * 每个需要执行SQL操作的Mapper方法，都对对应到一个MapperMethod，
+ * MapperMethod就是执行mybatis逻辑的真正入口
+ *
  * @author Clinton Begin
  * @author Eduardo Macarron
  * @author Lasse Voss
@@ -47,13 +50,22 @@ import org.apache.ibatis.session.SqlSession;
 public class MapperMethod {
 
   private final SqlCommand command;
+  // 这个包含了方法的返回值类型，还有参数顺序名字的对应关系
   private final MethodSignature method;
 
   public MapperMethod(Class<?> mapperInterface, Method method, Configuration config) {
+    // sqlCommand 保存对应的MappedStatement的statementType和对应的MappedStatement
     this.command = new SqlCommand(config, mapperInterface, method);
+    //
     this.method = new MethodSignature(config, mapperInterface, method);
   }
 
+  /**
+   * 真正开始执行SQL的入口，由 PlainMethodInvoker的invoke调用
+   * @param sqlSession
+   * @param args
+   * @return
+   */
   public Object execute(SqlSession sqlSession, Object[] args) {
     Object result;
     switch (command.getType()) {
@@ -219,14 +231,18 @@ public class MapperMethod {
   public static class SqlCommand {
 
     private final String name;
+
     private final SqlCommandType type;
 
     public SqlCommand(Configuration configuration, Class<?> mapperInterface, Method method) {
       final String methodName = method.getName();
       final Class<?> declaringClass = method.getDeclaringClass();
+
       MappedStatement ms = resolveMappedStatement(mapperInterface, methodName, declaringClass,
           configuration);
+
       if (ms == null) {
+        // 如果使用注解的方式，并且注解为Flush，可以不需要MappedStatement
         if (method.getAnnotation(Flush.class) != null) {
           name = null;
           type = SqlCommandType.FLUSH;
@@ -243,6 +259,10 @@ public class MapperMethod {
       }
     }
 
+    /**
+     * 这里返回的实际上是对应的MappedStatement的id，也就是mapper接口名和mapper方法名拼接而来的
+     * @return
+     */
     public String getName() {
       return name;
     }
@@ -251,6 +271,12 @@ public class MapperMethod {
       return type;
     }
 
+    // 1. 直接拿接口的name+方法的name作为MappedStatement的id查找MappedStatement,找到就返回
+    // 2. 如果方法Method对象声明它的类Class和传人的mapperInterface，是同一个，返回null
+    // 3.找到mapperInterface继承的接口，递归查找
+    // conclusion: 从这里可以看到MappedStatement的id策略还是接口名+方法名来构成
+    // 其实也就强制了如果是xml配置的mapper，namespace和动作节点的id都不能少，且要能对应起来，
+    // 有点类似于struts的action配置文件
     private MappedStatement resolveMappedStatement(Class<?> mapperInterface, String methodName,
         Class<?> declaringClass, Configuration configuration) {
       String statementId = mapperInterface.getName() + "." + methodName;
@@ -274,12 +300,13 @@ public class MapperMethod {
 
   public static class MethodSignature {
 
-    private final boolean returnsMany;
-    private final boolean returnsMap;
+    // 返回值类型
+    private final boolean returnsMany; // 集合和Map
+    private final boolean returnsMap; // 有MapKey的情况
     private final boolean returnsVoid;
     private final boolean returnsCursor;
     private final boolean returnsOptional;
-    private final Class<?> returnType;
+    private final Class<?> returnType; // 实际的返回值类型，不是List 或者Map Array，而是真实的类型
     private final String mapKey;
     private final Integer resultHandlerIndex;
     private final Integer rowBoundsIndex;
@@ -288,20 +315,27 @@ public class MapperMethod {
     public MethodSignature(Configuration configuration, Class<?> mapperInterface, Method method) {
       Type resolvedReturnType = TypeParameterResolver.resolveReturnType(method, mapperInterface);
       if (resolvedReturnType instanceof Class<?>) {
+        // 直接返回一个对象
         this.returnType = (Class<?>) resolvedReturnType;
       } else if (resolvedReturnType instanceof ParameterizedType) {
+        // 有泛型，需要原生类型
         this.returnType = (Class<?>) ((ParameterizedType) resolvedReturnType).getRawType();
       } else {
+
         this.returnType = method.getReturnType();
       }
       this.returnsVoid = void.class.equals(this.returnType);
       this.returnsMany = configuration.getObjectFactory().isCollection(this.returnType) || this.returnType.isArray();
       this.returnsCursor = Cursor.class.equals(this.returnType);
       this.returnsOptional = Optional.class.equals(this.returnType);
+      // 返回值类型为Map时，是否有MapKey注解
       this.mapKey = getMapKey(method);
       this.returnsMap = this.mapKey != null;
+      // RowBounds参数的索引位置
       this.rowBoundsIndex = getUniqueParamIndex(method, RowBounds.class);
+      //ResultHandler参数索引的位置
       this.resultHandlerIndex = getUniqueParamIndex(method, ResultHandler.class);
+      // 有了方法参数的信息，并且构建了参数index到参数名的映射
       this.paramNameResolver = new ParamNameResolver(configuration, method);
     }
 

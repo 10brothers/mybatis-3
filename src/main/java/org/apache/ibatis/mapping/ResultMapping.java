@@ -26,24 +26,45 @@ import org.apache.ibatis.type.TypeHandler;
 import org.apache.ibatis.type.TypeHandlerRegistry;
 
 /**
+ * 每一个ResultMapping就是一个属性和列名的对应关系
  * @author Clinton Begin
+ *
+ *
  */
 public class ResultMapping {
 
   private Configuration configuration;
+  // 属性名
   private String property;
+  // 列名
   private String column;
+
+  // Java类型
   private Class<?> javaType;
+  // jdbc类型
   private JdbcType jdbcType;
+
+  // 对应的类型处理器
   private TypeHandler<?> typeHandler;
+
+  // 内嵌的ResultMapId，Mybatis支持嵌套的查询，类似Hibernate那种关联查询
   private String nestedResultMapId;
+
+  /**
+   * 对应的关联查询的查询Id
+   */
   private String nestedQueryId;
+
+  // 定义的非空的列
   private Set<String> notNullColumns;
+  // 列前缀
   private String columnPrefix;
   private List<ResultFlag> flags;
   private List<ResultMapping> composites;
   private String resultSet;
   private String foreignColumn;
+
+  // 是否懒加载
   private boolean lazy;
 
   ResultMapping() {

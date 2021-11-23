@@ -50,11 +50,22 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.TypeHandler;
 
 /**
+ *
+ * MapperBuilder构建器助理类
+ *
+ * 这个类用来从mapper的xml配置文件中来构建 MappedStatement
+ *
  * @author Clinton Begin
  */
 public class MapperBuilderAssistant extends BaseBuilder {
 
+  /**
+   * 当前Mapper的命名空间
+   */
   private String currentNamespace;
+  /**
+   * 资源，这个资源是Mapper接口类的类路径，是一个.java (best guess) 结尾的，后面是mybatis加的
+   */
   private final String resource;
   private Cache currentCache;
   private boolean unresolvedCacheRef; // issue #676
@@ -82,6 +93,9 @@ public class MapperBuilderAssistant extends BaseBuilder {
     this.currentNamespace = currentNamespace;
   }
 
+  /**
+   * xml配置的情况下，使用namespace+ select|insert|update|delete标签上的id一起作为一个MappedStatement的id
+   */
   public String applyCurrentNamespace(String base, boolean isReference) {
     if (base == null) {
       return null;
@@ -267,6 +281,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
       throw new IncompleteElementException("Cache-ref not yet resolved");
     }
 
+    // 构造MappedStatement 的 id
     id = applyCurrentNamespace(id, false);
     boolean isSelect = sqlCommandType == SqlCommandType.SELECT;
 
@@ -288,6 +303,7 @@ public class MapperBuilderAssistant extends BaseBuilder {
         .useCache(valueOrDefault(useCache, isSelect))
         .cache(currentCache);
 
+    // 生成一个 ParameterMap对象，这个对象的Id会加一个 -Inline， 使用parameterType来定义的，而不是parameterMap标签
     ParameterMap statementParameterMap = getStatementParameterMap(parameterMap, parameterType, id);
     if (statementParameterMap != null) {
       statementBuilder.parameterMap(statementParameterMap);

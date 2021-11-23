@@ -30,13 +30,31 @@ import org.apache.ibatis.executor.BatchResult;
 import org.apache.ibatis.reflection.ExceptionUtil;
 
 /**
+ *
+ * SqlSession的管理类，这个类实际上调用一次就够了
+ *
  * @author Larry Meadors
  */
 public class SqlSessionManager implements SqlSessionFactory, SqlSession {
 
+  /**
+   * SqlSessionFactory，这里实际上就是DefaultSqlSessionFactory的实例
+   */
   private final SqlSessionFactory sqlSessionFactory;
+
+
+  /**
+   * 这是一个创建的JDK动态代理对象，为什么这里要使用一个代理对象，
+   * 是为了同一个线程使用同一个SqlSession，而不是同一个线程多次进行数据库操作时，每次都创建一个SqlSession
+   *
+   * 并且考虑到事务的话，肯定要是同一个SqlSession
+   */
   private final SqlSession sqlSessionProxy;
 
+  /**
+   * ThreadLocal，为了保存线程内的SqlSession对象
+   * 如果存在，直接拿来使用，否则就创建一个新的SqlSession
+   */
   private final ThreadLocal<SqlSession> localSqlSession = new ThreadLocal<>();
 
   private SqlSessionManager(SqlSessionFactory sqlSessionFactory) {

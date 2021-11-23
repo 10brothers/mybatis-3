@@ -40,14 +40,21 @@ import org.apache.ibatis.session.RowBounds;
 import org.apache.ibatis.session.SqlSession;
 
 /**
+ *
  * The default implementation for {@link SqlSession}.
  * Note that this class is not Thread-Safe.
+ * 默认的SqlSession的实现，非线程安全
+ *
  *
  * @author Clinton Begin
  */
 public class DefaultSqlSession implements SqlSession {
 
   private final Configuration configuration;
+
+  /**
+   * SqlSession里面定义了一些查询方法，最后委托给Executor来执行操作
+   */
   private final Executor executor;
 
   private final boolean autoCommit;
@@ -70,6 +77,15 @@ public class DefaultSqlSession implements SqlSession {
     return this.selectOne(statement, null);
   }
 
+  /**
+   *
+   * 期待单个结果返回的，如果没有结果就返回null
+   *
+   * @param statement Unique identifier matching the statement to use.
+   * @param parameter A parameter object to pass to the statement.
+   * @param <T>
+   * @return
+   */
   @Override
   public <T> T selectOne(String statement, Object parameter) {
     // Popular vote was to return null on 0 results and throw exception on too many.
@@ -147,6 +163,7 @@ public class DefaultSqlSession implements SqlSession {
 
   private <E> List<E> selectList(String statement, Object parameter, RowBounds rowBounds, ResultHandler handler) {
     try {
+      // statement参数是通过Class.getName+method.getName 拼接的Id
       MappedStatement ms = configuration.getMappedStatement(statement);
       return executor.query(ms, wrapCollection(parameter), rowBounds, handler);
     } catch (Exception e) {

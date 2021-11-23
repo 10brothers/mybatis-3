@@ -28,10 +28,21 @@ import org.apache.ibatis.session.defaults.DefaultSqlSessionFactory;
 /**
  * Builds {@link SqlSession} instances.
  *
+ * 用来创建SqlSessionFactory，从xml的流中，读取配置，创建一个SqlSessionFactory
+ *
+ * 最后是委托为XMLConfigBuilder，所以这是一个通过XML配置来使用的类
+ *
+ * 或者从Configuration对象中来创建一个SqlSessionFactory实例
+ *
  * @author Clinton Begin
  */
 public class SqlSessionFactoryBuilder {
 
+  /**
+   * 从一个字节符中读取配置
+   * @param reader
+   * @return
+   */
   public SqlSessionFactory build(Reader reader) {
     return build(reader, null, null);
   }
@@ -59,6 +70,12 @@ public class SqlSessionFactoryBuilder {
       }
     }
   }
+
+  /**
+   * 从字节流中
+   * @param inputStream
+   * @return
+   */
 
   public SqlSessionFactory build(InputStream inputStream) {
     return build(inputStream, null, null);
@@ -88,6 +105,14 @@ public class SqlSessionFactoryBuilder {
     }
   }
 
+  /**
+   * 从Configuration对象中来创建SqlSessionFactory
+   *
+   * 这里的差别是不需要XMLConfigBuilder了，因为没有XML配置
+   *
+   * XMLConfigBuilder最终也是为了构建一个Configuration对象
+   *
+   */
   public SqlSessionFactory build(Configuration config) {
     return new DefaultSqlSessionFactory(config);
   }

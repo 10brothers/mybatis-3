@@ -31,14 +31,39 @@ import org.apache.ibatis.session.Configuration;
  * <p>
  * Can also have additional parameters that are created by the dynamic language (for loops, bind...).
  *
+ * 这个类具有真正要执行的SQL，也就是解析后的SQL，
+ * 会有占位符?出现，并且持有此SQL对应的参数名和参数值
+ *
  * @author Clinton Begin
  */
 public class BoundSql {
 
+  /**
+   * 真实的SQL语句
+   */
   private final String sql;
+
+  /**
+   * SQL执行时需要的参数映射关系，方法中每一个参数都有一个ParameterMapping
+   * 主要是参数的类型，typeHandler等信息
+   *
+   */
   private final List<ParameterMapping> parameterMappings;
+
+  /**
+   * 这个是具体的参数值，也就是实际调用方法是传递进来的参数值
+   */
   private final Object parameterObject;
+
+  /**
+   * 实际的参数名和参数值的映射关系
+   */
   private final Map<String, Object> additionalParameters;
+
+  /**
+   *  元对象，这个主要是用来操作层层的代理对象的，获取代理对象或者普通对象的值，修改值等
+   *  通过反射的方式
+   */
   private final MetaObject metaParameters;
 
   public BoundSql(Configuration configuration, String sql, List<ParameterMapping> parameterMappings, Object parameterObject) {

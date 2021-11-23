@@ -98,6 +98,13 @@ public abstract class BaseStatementHandler implements StatementHandler {
     }
   }
 
+  /**
+   * Statement的创建，由各个子类来实现，CallableStatement、PrepareStatement、SimpleStatement
+   *
+   * @param connection  数据库连接 connection
+   * @return Statement对象
+   * @throws SQLException 异常
+   */
   protected abstract Statement instantiateStatement(Connection connection) throws SQLException;
 
   protected void setStatementTimeout(Statement stmt, Integer transactionTimeout) throws SQLException {

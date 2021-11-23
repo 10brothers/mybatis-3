@@ -31,8 +31,14 @@ import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.util.MapUtil;
 
 /**
+ *
+ * 这个类是实际上的代理业务类，也就是真实的sql操作就在这个类，
+ * 是一个InvocationHandler的实现类
+ *
  * @author Clinton Begin
  * @author Eduardo Macarron
+ *
+ * @see InvocationHandler
  */
 public class MapperProxy<T> implements InvocationHandler, Serializable {
 
@@ -41,8 +47,20 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
       | MethodHandles.Lookup.PACKAGE | MethodHandles.Lookup.PUBLIC;
   private static final Constructor<Lookup> lookupConstructor;
   private static final Method privateLookupInMethod;
+
+  /**
+   * sqlSession在此类构造时，和固定的一个SqlSession实例绑定
+   */
   private final SqlSession sqlSession;
+
+  /**
+   * 此MapperProxy实际对应的MapperInterface
+   */
   private final Class<T> mapperInterface;
+
+  /**
+   * 此MapperProxy所对应的MapperInvoker的缓存
+   */
   private final Map<Method, MapperMethodInvoker> methodCache;
 
   public MapperProxy(SqlSession sqlSession, Class<T> mapperInterface, Map<Method, MapperMethodInvoker> methodCache) {
@@ -52,6 +70,10 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
   }
 
   static {
+    /*
+     *  这里主要是用来考虑Java8和Java9的的 default方法
+     *  Java8和9的对default方法的调用有些区别
+     */
     Method privateLookupIn;
     try {
       privateLookupIn = MethodHandles.class.getMethod("privateLookupIn", Class.class, MethodHandles.Lookup.class);
@@ -77,12 +99,25 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
     lookupConstructor = lookup;
   }
 
+  /**
+   *
+   * 这个invoke方法内部就是mybatis需要完成的实际的代理逻辑，也就是说需要进行SQL操作
+   * 从这里返回的值，就是最终的SQL操作结果了
+   *
+   * @param proxy 生成的代理对象
+   * @param method 调用的目标对象的Method
+   * @param args 方法调用参数
+   * @return 返回一个SQL操作的结果
+   * @throws Throwable
+   */
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
     try {
+      // Object本身的方法，直接调用即可，不进行代理
       if (Object.class.equals(method.getDeclaringClass())) {
         return method.invoke(this, args);
       } else {
+
         return cachedInvoker(method).invoke(proxy, method, args, sqlSession);
       }
     } catch (Throwable t) {
@@ -90,10 +125,16 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
     }
   }
 
+  /**
+   * 是否已经缓存了MapperMethodInvoker
+   * @param method
+   * @return
+   * @throws Throwable
+   */
   private MapperMethodInvoker cachedInvoker(Method method) throws Throwable {
     try {
       return MapUtil.computeIfAbsent(methodCache, method, m -> {
-        if (m.isDefault()) {
+        if (m.isDefault()) { // 如果调用的是default方法的话，使用MethodHandle的方式调用
           try {
             if (privateLookupInMethod == null) {
               return new DefaultMethodInvoker(getMethodHandleJava8(method));
@@ -105,6 +146,9 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
             throw new RuntimeException(e);
           }
         } else {
+          // 正儿八经的需要执行的内容
+          // 将接口的方法，包装成一个MapperMethod，当调用代理对象的方法时，代理对象的方法会调用InvocationHandler的invoke方法
+          // 这个invoke方法就会调用到 PlainMethodInvoker的invoke，最终调用到MapperMethod的execute方法
           return new PlainMethodInvoker(new MapperMethod(mapperInterface, method, sqlSession.getConfiguration()));
         }
       });
@@ -128,6 +172,11 @@ public class MapperProxy<T> implements InvocationHandler, Serializable {
     return lookupConstructor.newInstance(declaringClass, ALLOWED_MODES).unreflectSpecial(method, declaringClass);
   }
 
+  /**
+   * 这个接口是为了应对不同的调用方法调用实现
+   * 如果是普通的接口方法，直接调用即可
+   * 如果是default方法，则需要使用MethodHandle的方式来调用
+   */
   interface MapperMethodInvoker {
     Object invoke(Object proxy, Method method, Object[] args, SqlSession sqlSession) throws Throwable;
   }

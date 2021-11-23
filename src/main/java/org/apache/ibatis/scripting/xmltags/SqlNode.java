@@ -16,8 +16,27 @@
 package org.apache.ibatis.scripting.xmltags;
 
 /**
+ *
+ * 用来表示SQL节点，一个完整的SQL语句可能会由多个部分组成，原因就在于mybatis支持的动态sql
+ * <p>
+ *   &lt;select&gt; <br/>
+ *
+ *     select * from test <br/>
+ *     where 1=1 <br/>
+ *     &lt;if test='a==b'&gt; <br/>
+ *     and <br/>
+ *     &lt;/if&gt; <br/>
+ *
+ *   &lt;/select&gt;
+ * </p>
+ *
+ *   上面这个片段就会有两段SqlNode
+ *
  * @author Clinton Begin
  */
 public interface SqlNode {
+  /**
+   *  对SqlNode进行处理
+   */
   boolean apply(DynamicContext context);
 }

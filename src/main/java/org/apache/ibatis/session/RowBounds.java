@@ -16,6 +16,11 @@
 package org.apache.ibatis.session;
 
 /**
+ *
+ * 这个类是用来表示查询时，进行分页的信息，
+ * offset：从哪里开始查
+ * limit： 一次查询多少
+ *
  * @author Clinton Begin
  */
 public class RowBounds {

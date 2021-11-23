@@ -48,6 +48,9 @@ public class MetaClass {
     return MetaClass.forClass(propType, reflectorFactory);
   }
 
+  /**
+   * 支持层级的表达是 field1.field2.field3
+   */
   public String findProperty(String name) {
     StringBuilder prop = buildProperty(name, new StringBuilder());
     return prop.length() > 0 ? prop.toString() : null;
@@ -68,6 +71,9 @@ public class MetaClass {
     return reflector.getSetablePropertyNames();
   }
 
+  /**
+   * 获取给定属性名对应的setter参数类型
+   */
   public Class<?> getSetterType(String name) {
     PropertyTokenizer prop = new PropertyTokenizer(name);
     if (prop.hasNext()) {
@@ -78,6 +84,9 @@ public class MetaClass {
     }
   }
 
+  /**
+   * 获取给定属性名的getter返回值类型
+   */
   public Class<?> getGetterType(String name) {
     PropertyTokenizer prop = new PropertyTokenizer(name);
     if (prop.hasNext()) {
